@@ -136,7 +136,8 @@ void proc(int i)
 				continue;
 			} else {
 				write(pipe_descriptors[j].write, &r1, sizeof(msg));
-				printf("[+] process #%d sending  msg{type:%d i:%d time:%d}\n", i, r1.type, r1.i, r1.time);
+				printf("[+] process #%d sending  msg{type:%d i:%d time:%d}\n", i, r1.type, r1.i,
+				       r1.time);
 			}
 		}
 
@@ -167,7 +168,8 @@ void proc(int i)
 				temp.i = r2.i;
 				temp.time = local_logic_clock;
 				write(pipe_descriptors[r2.i].write, &temp, sizeof(msg));
-				printf("[+] process #%d sending  msg{type:%d i:%d time:%d}\n", i, temp.type, temp.i, temp.time);
+				printf("[+] process #%d sending  msg{type:%d i:%d time:%d}\n", i, temp.type, temp.i,
+				       temp.time);
 
 			} else if (r2.type == msg_type::reply) {
 				reply_count--;
@@ -178,17 +180,15 @@ void proc(int i)
 				message remove the corresponding request 
 				from its own queue
 				*/
-				
+
 				std::vector<msg>::iterator iter = wait_q.begin();
-				while(iter != wait_q.end()){
-					if(  ((*iter).i == r2.i)   && ((*iter).time == r2.time) ){
+				while (iter != wait_q.end()) {
+					if (((*iter).i == r2.i) && ((*iter).time == r2.time)) {
 						iter = wait_q.erase(iter);
-					}else{
+					} else {
 						++iter;
 					}
 				}
-				
-
 			}
 
 			//  -------------------------------- CRITICAL SECTION -----------------------------------------
@@ -236,7 +236,8 @@ void proc(int i)
 						continue;
 					} else {
 						write(pipe_descriptors[j].write, &tmp, sizeof(msg));
-						printf("[+] process #%d sending  msg{type:%d i:%d time:%d}\n", i, tmp.type, tmp.i, tmp.time);
+						printf("[+] process #%d sending  msg{type:%d i:%d time:%d}\n", i,
+						       tmp.type, tmp.i, tmp.time);
 					}
 				}
 
@@ -308,7 +309,6 @@ void processes_init()
 
 int main()
 {
-
 	shm_init();
 	pipes_init();
 	processes_init();
