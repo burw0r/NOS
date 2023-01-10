@@ -413,7 +413,7 @@ static void timer_function(struct timer_list *t)
 	else {
 		LOG("timer: nothing in input buffer");
 		//for test: put '#' in output buffer
-		got = kfifo_put(fifo_out, '#');
+		got = kfifo_put(fifo_out, '#');     // debug
 	}
 
 	dump_buffer("timer-end:in_buff", in_buff);

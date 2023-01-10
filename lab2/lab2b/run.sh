@@ -3,8 +3,8 @@ echo "[+] testing with string \"ABCEDFG\""
 echo "ABCEDFG" >> /dev/shofer_in
 
 # sending to 7 to control_dev
-echo "[+] ioctl 7"
-./test/ioctl /dev/shofer_control 7
+echo "[+] ioctl 10"
+./test/ioctl /dev/shofer_control 10
 
 # reading from output_dev 
 read OUT < /dev/shofer_out
