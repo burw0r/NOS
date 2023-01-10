@@ -308,7 +308,6 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 	unsigned int copied;
 
 	spin_lock(&in_buff->key);
-
 	dump_buffer("in_dev-end:in_buff:", in_buff);
 
 	retval = kfifo_from_user(fifo, (char __user *) ubuf, count, &copied);
@@ -318,7 +317,6 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 		retval = copied;
 
 	dump_buffer("in_dev-end:in_buff:", in_buff);
-
 	spin_unlock(&in_buff->key);
 
 	return retval;
