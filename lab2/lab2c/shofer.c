@@ -282,10 +282,17 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 		// return -EPERM;
 	}
 
-	if(shofer->msg_cnt == 0){
-		LOG("[+] Error: minimum number of messages(0) in message queue reached");
-		return -1;
-	}
+	// if(shofer->msg_cnt == 0){
+	// 	LOG("[+] Error: minimum number of messages(0) in message queue reached");
+	// 	return -1;
+	// }
+
+
+	/* Ako je veličina poruke koju se želi pročitati manja od veličine najveće poruke koja stane u red, javiti grešku ????*/
+	// if(count < MAX_MSG_SIZE){
+	// 	LOG("[+] ?????");
+	// 	return -1;
+	// }
 
 	if (mutex_lock_interruptible(&buffer->lock))
 		return -ERESTARTSYS;
@@ -332,10 +339,15 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 	}
 
 	if(shofer->msg_cnt == MAX_MSG_NUM){
-		LOG("\n\n\n\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaa\n\n\n");
 		LOG("[+] Error: maximum number of messages(%d) in message queue reached", MAX_MSG_NUM);
 		return -1;
 	}
+
+	if(count > MAX_MSG_SIZE){
+		LOG("[+] Error: message bigger than MAX_MSG_SIZE");
+		return -1;
+	}
+
 
 	if (mutex_lock_interruptible(&buffer->lock))
 		return -ERESTARTSYS;

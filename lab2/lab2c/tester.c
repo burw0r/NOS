@@ -34,7 +34,7 @@ int main(){
     printf("\n------------------ writing correctly ------------------\n");
 
     printf("[+] writing to \"ABCDEFGHI\" to device\n");
-    char buff_w[] = "ABCDEFGHI";
+    char buff_w[100] = "ABCDEFGHI";
     int ret_write = write(retval_wr, buff_w, sizeof(buff_w));
     printf(" >  writing %s to device\n", buff_w);
     printf("  > write returned %d\n", ret_write);
@@ -53,7 +53,7 @@ int main(){
     printf("\n------------------ illegal write ------------------\n");
 
     printf("[+] trying to write to a read only  fd\n");
-    char buff2[] = "illegal write!";
+    char buff2[100] = "illegal write!";
     int ret_write_illegal = write(retval_rd, buff2, sizeof(buff2));
     printf("  > write returned %d\n", ret_write_illegal);
 
@@ -61,7 +61,7 @@ int main(){
     printf("\n------------------ illegal read ------------------\n");
 
     printf("[+] trying to read from a write only  fd\n");
-    char buff3[15];
+    char buff3[100];
     int ret_read_illegal = read(retval_wr, buff3, sizeof(buff3));
     printf("  > read returned %d\n", ret_read_illegal);
 
@@ -72,6 +72,13 @@ int main(){
     for(int i=0; i<11; i++){
         int ret_write = write(retval_wr, &c, sizeof(char));
     }
+
+
+
+    printf("-------------------- mesgq size --------------------\n");
+    printf("[+] testing max message size\n");
+    char maxmsg[] = "#########THISISONEVERYLONGMESSAFE#########";
+    write(retval_wr, maxmsg, sizeof(maxmsg));
 
     printf("------------------------------------------------------\n");
 
