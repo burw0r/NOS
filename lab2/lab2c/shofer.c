@@ -189,13 +189,16 @@ static void shofer_delete(struct shofer_dev *shofer)
 /* Called when a process calls "open" on this device */
 static int shofer_open(struct inode *inode, struct file *filp)
 {
+
 	struct shofer_dev *shofer; /* device information */
+
+	LOG("####### OPEN #######");
 
 	shofer = container_of(inode->i_cdev, struct shofer_dev, cdev);
 	filp->private_data = shofer; /* for other methods */
 	
 	if ( ((filp->f_flags & O_ACCMODE) != O_RDONLY) && (((filp->f_flags & O_ACCMODE) != O_WRONLY)) ){
-		LOG("[+] incorrect file open flag");
+		LOG("[+] incorrect file open flag, only O_WRONLY and O_RDONLY allowed");
 		return -1;
 		// return -EPERM;
 	}
@@ -219,6 +222,17 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 	struct buffer *buffer = shofer->buffer;
 	struct kfifo *fifo = &buffer->fifo;
 	unsigned int copied;
+
+
+	LOG("####### READ #######");
+
+	if ( ((filp->f_flags & O_ACCMODE) == O_WRONLY)) {
+		LOG("[+] Cannot read from a device opened as write only (O_WRONLY flag) ");
+		return -1;
+		// return -EPERM;
+	}
+
+
 
 	if (mutex_lock_interruptible(&buffer->lock))
 		return -ERESTARTSYS;
@@ -247,6 +261,18 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 	struct buffer *buffer = shofer->buffer;
 	struct kfifo *fifo = &buffer->fifo;
 	unsigned int copied;
+
+
+
+	LOG("####### WRITE #######");
+
+
+	if ( ((filp->f_flags & O_ACCMODE) == O_RDONLY)) {
+		LOG("[+] Cannot write to a device opened as read only (O_RDONLY flag) ");
+		return -1;
+		// return -EPERM;
+	}
+
 
 	if (mutex_lock_interruptible(&buffer->lock))
 		return -ERESTARTSYS;
