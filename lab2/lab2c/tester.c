@@ -6,12 +6,6 @@
 #include <fcntl.h>
 
 
-/*
- 
-Upon successful completion, the function will open the file and return a non-negative integer representing the lowest numbered unused file descriptor. Otherwise, -1 is returned and errno is set to indicate the error. No files will be created or modified if the function returns -1.
- */
-
-
 
 int main(){
 
@@ -33,17 +27,17 @@ int main(){
 
     printf("\n------------------ writing correctly ------------------\n");
 
-    printf("[+] writing to \"ABCDEFGHI\" to device\n");
-    char buff_w[100] = "ABCDEFGHI";
+    printf("[+] writing to \"ABCDEFGHI1\" to device\n");
+    char buff_w[] = "ABCDEFGHI1";
     int ret_write = write(retval_wr, buff_w, sizeof(buff_w));
-    printf(" >  writing %s to device\n", buff_w);
+    printf("  > writing %s to device\n", buff_w);
     printf("  > write returned %d\n", ret_write);
 
 
 
     printf("\n------------------ reading correctly ------------------\n");
 
-    printf("[+] trying to write to a read only  fd\n");
+    printf("[+] reading from device  fd\n");
     char buff_r[100];
     int ret_read = read(retval_rd, buff_r, sizeof(buff_r));
     printf("  > read %s from device\n", buff_r);
@@ -66,19 +60,21 @@ int main(){
     printf("  > read returned %d\n", ret_read_illegal);
 
 
-    printf("-------------------- mesgq size --------------------\n");
-    printf("[+] testing message queue size\n");
-    char c = 'Q';
-    for(int i=0; i<11; i++){
-        int ret_write = write(retval_wr, &c, sizeof(char));
-    }
+    printf("-------------------- msgqueue size and blocking --------------------\n");
+    printf("[+] testing message queue size \n");
+    printf("[+] testing blocking read operation when there are no messages in queue --> [+] Blocking read, waiting for message in msgq\n");
+    /* msg queue is empty at this point */
+    read(retval_rd, buff_r, sizeof(buff_r));
+    printf("  > read %s\n", buff_r);
 
 
-
-    printf("-------------------- mesgq size --------------------\n");
+    printf("\n-------------------- mesgq size --------------------\n");
     printf("[+] testing max message size\n");
+    printf("[+] testing message  size --> should log: [+] Error: message bigger than MAX_MSG_SIZE\n");
+    printf("[+] trying to write #########THISISONEVERYLONGMESSAFE#########\n");
     char maxmsg[] = "#########THISISONEVERYLONGMESSAFE#########";
-    write(retval_wr, maxmsg, sizeof(maxmsg));
+    int big_write = write(retval_wr, maxmsg, sizeof(maxmsg));
+    printf("[+] write returned %d\n", big_write);
 
     printf("------------------------------------------------------\n");
 

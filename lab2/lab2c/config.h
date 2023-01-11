@@ -31,6 +31,7 @@ struct shofer_dev {
 	struct buffer *buffer;	/* Pointer to buffer */
 	int thread_cnt;
 	int msg_cnt;
+	wait_queue_head_t queue_in, queue_out;
 };
 
 

@@ -182,16 +182,21 @@ static struct shofer_dev *shofer_create(dev_t dev_no, struct file_operations *fo
 	memset(shofer, 0, sizeof(struct shofer_dev));
 	shofer->buffer = buffer;
 
-	cdev_init(&shofer->cdev, fops);
-	shofer->cdev.owner = THIS_MODULE;
-	shofer->cdev.ops = fops;
 
 	/*keep track of how many threads use msgq*/
 	shofer->thread_cnt = 0;  
 
-
 	/*keep track of how many messages are in  msgq*/
 	shofer->msg_cnt = 0;
+
+	/* init wait queues for in and out devices */
+	init_waitqueue_head(&(shofer->queue_in));
+	init_waitqueue_head(&(shofer->queue_out));
+
+
+	cdev_init(&shofer->cdev, fops);
+	shofer->cdev.owner = THIS_MODULE;
+	shofer->cdev.ops = fops;
 
 	*retval = cdev_add (&shofer->cdev, dev_no, 1);
 	shofer->dev_no = dev_no;
@@ -271,11 +276,6 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 	LOG("####### READ #######");
 
 
-	// LOG("illegal read uvjeti : ");
-	// LOG("	filp->f_flags & O_ACCMODE = %d    ", (filp->f_flags & O_ACCMODE));
-	// LOG("	O_WRONLY = %d\n ", O_WRONLY);
-
-
 	if ( ((filp->f_flags & O_ACCMODE) == O_WRONLY)) {
 		LOG("[+] Cannot read from a device opened as write only (O_WRONLY flag) ");
 		return -1;
@@ -289,15 +289,30 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 
 
 	/* Ako je veličina poruke koju se želi pročitati manja od veličine najveće poruke koja stane u red, javiti grešku ????*/
-	// if(count < MAX_MSG_SIZE){
-	// 	LOG("[+] ?????");
-	// 	return -1;
-	// }
+	/* najmanje? */
+	if(count < 0){
+		LOG("[+] Invalid read size");
+		return -1;
+	}
 
 	if (mutex_lock_interruptible(&buffer->lock))
 		return -ERESTARTSYS;
 
 	dump_buffer(buffer);
+
+	/* if there are no messages in msgq block the thread */
+	/*-----------------------------------------------------------------*/
+	if(kfifo_len(fifo) == 0){
+		mutex_unlock(&buffer->lock);
+		LOG("[+] No messages in message queue");
+		LOG("[+] Blocking read, waiting for message in msgq");
+		if (wait_event_interruptible(shofer->queue_in , (kfifo_len(fifo) > 0)))
+			return -ERESTARTSYS;
+		if (mutex_lock_interruptible(&buffer->lock))
+			return -ERESTARTSYS;
+	}
+	/*-----------------------------------------------------------------*/
+
 
 	retval = kfifo_to_user(fifo, (char __user *) ubuf, count, &copied);
 	if (retval)
@@ -312,6 +327,8 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 	LOG("[+] Number of messages in msgq = %d", shofer->msg_cnt);
 
 	mutex_unlock(&buffer->lock);
+	/* for wait_event_interruptible called on queue_out in shofer_write */
+	wake_up_interruptible(&shofer->queue_out);
 
 	return retval;
 }
@@ -328,18 +345,15 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 
 	LOG("####### WRITE #######");
 
-	// LOG("illegal write uvjeti : ");
-	// LOG("	filp->f_flags & O_ACCMODE = %d", (filp->f_flags & O_ACCMODE));
-	// LOG("	O_RDONLY = %d\n ", O_RDONLY);
-
 	if ( ((filp->f_flags & O_ACCMODE) == O_RDONLY)) {
 		LOG("[+] Cannot write to a device opened as read only (O_RDONLY flag) ");
 		return -1;
 		// return -EPERM;
 	}
 
+
 	if(shofer->msg_cnt == MAX_MSG_NUM){
-		LOG("[+] Error: maximum number of messages(%d) in message queue reached", MAX_MSG_NUM);
+		LOG("[+] Maximum number of messages(%d) in message queue reached", MAX_MSG_NUM);
 		return -1;
 	}
 
@@ -348,26 +362,44 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 		return -1;
 	}
 
-
 	if (mutex_lock_interruptible(&buffer->lock))
 		return -ERESTARTSYS;
 
 	dump_buffer(buffer);
 
+	/* if the msgq is full block the thread untill a message is read */
+	/*-----------------------------------------------------------------*/
+	while(kfifo_avail(fifo) < count){
+		mutex_unlock(&buffer->lock);
+		LOG("[+] Blocking write, waiting for space in msgq");
+		if (wait_event_interruptible(shofer->queue_out , (kfifo_avail(fifo) >= count)))
+			return -ERESTARTSYS;
+		if (mutex_lock_interruptible(&buffer->lock))
+			return -ERESTARTSYS;
+	}
+	/*-----------------------------------------------------------------*/
+
+
 	retval = kfifo_from_user(fifo, (char __user *) ubuf, count, &copied);
-	// LOG("\n\n\n++++++++++++++++++++++------------> %s\n\n\n", ubuf);
-	if (retval)
+	if (retval){
+
 		printk(KERN_NOTICE "shofer:kfifo_from_user failed\n");
+		mutex_unlock(&buffer->lock);
+		return -EFAULT;
+	}
 	else
 		retval = copied;
 
 	dump_buffer(buffer);
+
 
 	/* writing to devices simulates sending message to msgq*/
 	shofer->msg_cnt+=1;
 	LOG("[+] Number of messages in msgq = %d", shofer->msg_cnt);
 
 	mutex_unlock(&buffer->lock);
+	/* for wait_event_interruptible called on queue_in in shofer_read */
+	wake_up_interruptible(&shofer->queue_in);
 
 	return retval;
 }
