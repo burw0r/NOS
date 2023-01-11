@@ -26,6 +26,19 @@
 
 #include "config.h"
 
+
+/* Max number of messages */
+int MAX_MSG_NUM;
+module_param(MAX_MSG_NUM, int, S_IRUGO);
+
+/* Max message size */
+int MAX_MSG_SIZE;
+module_param(MAX_MSG_SIZE, int, S_IRUGO);
+
+/* Max threads/procs allowed to use msgqueue*/
+int MAX_THREAD_NUM;
+module_param(MAX_THREAD_NUM, int, S_IRUGO);
+
 /* Buffer size */
 static int buffer_size = BUFFER_SIZE;
 
@@ -71,6 +84,9 @@ static int __init shofer_module_init(void)
 	dev_t dev_no = 0;
 
 	printk(KERN_NOTICE "Module 'shofer' started initialization\n");
+	LOG("[+] MAX_MSG_NUM     = %d\n", MAX_MSG_NUM);
+	LOG("[+] MAX_MSG_SIZE    = %d\n", MAX_MSG_SIZE);
+	LOG("[+] MAX_THREAD_NUM  = %d\n", MAX_THREAD_NUM);
 
 	/* get device number(s) */
 	retval = alloc_chrdev_region(&dev_no, 0, 1, DRIVER_NAME);
@@ -169,6 +185,10 @@ static struct shofer_dev *shofer_create(dev_t dev_no, struct file_operations *fo
 	cdev_init(&shofer->cdev, fops);
 	shofer->cdev.owner = THIS_MODULE;
 	shofer->cdev.ops = fops;
+
+	/*keep track of how many threads use msgq*/
+	shofer->thread_cnt = 0;  
+
 	*retval = cdev_add (&shofer->cdev, dev_no, 1);
 	shofer->dev_no = dev_no;
 	if (*retval) {
@@ -196,6 +216,12 @@ static int shofer_open(struct inode *inode, struct file *filp)
 
 	shofer = container_of(inode->i_cdev, struct shofer_dev, cdev);
 	filp->private_data = shofer; /* for other methods */
+
+	if(shofer->thread_cnt == MAX_THREAD_NUM ){
+		LOG("[+] Error: maximum number of threads/procs reached");
+		return -1;
+	}
+	shofer->thread_cnt += 1;   
 	
 	if ( ((filp->f_flags & O_ACCMODE) != O_RDONLY) && (((filp->f_flags & O_ACCMODE) != O_WRONLY)) ){
 		LOG("[+] incorrect file open flag, only O_WRONLY and O_RDONLY allowed");
@@ -210,6 +236,20 @@ static int shofer_open(struct inode *inode, struct file *filp)
 /* Called when a process performs "close" operation */
 static int shofer_release(struct inode *inode, struct file *filp)
 {
+
+	struct shofer_dev *shofer; /* device information */
+
+	LOG("####### RELEASE #######");
+
+	shofer = container_of(inode->i_cdev, struct shofer_dev, cdev);
+	filp->private_data = shofer; /* for other methods */
+
+	if(shofer->thread_cnt == 0 ){
+		/* shouldn't happen */
+		LOG("[+] Error: threac_cnt = 0 ");
+		return -1;
+	}
+	shofer->thread_cnt -= 1;   
 	return 0; /* nothing to do; could not set this function in fops */
 }
 
@@ -262,10 +302,7 @@ static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 	struct kfifo *fifo = &buffer->fifo;
 	unsigned int copied;
 
-
-
 	LOG("####### WRITE #######");
-
 
 	if ( ((filp->f_flags & O_ACCMODE) == O_RDONLY)) {
 		LOG("[+] Cannot write to a device opened as read only (O_RDONLY flag) ");

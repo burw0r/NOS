@@ -29,6 +29,7 @@ struct shofer_dev {
 	dev_t dev_no;		/* device number */
 	struct cdev cdev;	/* Char device structure */
 	struct buffer *buffer;	/* Pointer to buffer */
+	int thread_cnt;
 };
 
 
