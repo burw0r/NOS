@@ -282,14 +282,6 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 		// return -EPERM;
 	}
 
-	// if(shofer->msg_cnt == 0){
-	// 	LOG("[+] Error: minimum number of messages(0) in message queue reached");
-	// 	return -1;
-	// }
-
-
-	/* Ako je veličina poruke koju se želi pročitati manja od veličine najveće poruke koja stane u red, javiti grešku ????*/
-	/* najmanje? */
 	if(count < 0){
 		LOG("[+] Invalid read size");
 		return -1;
