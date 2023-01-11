@@ -30,6 +30,7 @@ struct shofer_dev {
 	struct cdev cdev;	/* Char device structure */
 	struct buffer *buffer;	/* Pointer to buffer */
 	int thread_cnt;
+	int msg_cnt;
 };
 
 

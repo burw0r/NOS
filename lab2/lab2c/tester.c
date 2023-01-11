@@ -66,7 +66,21 @@ int main(){
     printf("  > read returned %d\n", ret_read_illegal);
 
 
+    printf("-------------------- mesgq size --------------------\n");
+    printf("[+] testing message queue size\n");
+    char c = 'Q';
+    for(int i=0; i<11; i++){
+        int ret_write = write(retval_wr, &c, sizeof(char));
+    }
+
     printf("------------------------------------------------------\n");
 
+    printf("[+] closing opened devices\n");
+    close(retval_wr);
+    close(retval_rd);
+    close(retval_rw);
+
+
+    printf("[+] done\n");
 
 }
